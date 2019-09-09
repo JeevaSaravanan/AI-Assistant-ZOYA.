@@ -13,7 +13,7 @@ import wolframalpha
 #package time
 import time
 from time import ctime
-appId ='JGELT7-JPP84WGWJ6'
+appId ='*************'
 client = wolframalpha.Client(appId)
 
 #greetings and response array
