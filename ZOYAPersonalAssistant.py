@@ -8,10 +8,13 @@ import pyttsx3
 import random
 
 #package for webbrowser
-import webbrowser
-import wikipedia
-import requests
-from googlesearch import search
+import wolframalpha
+
+#package time
+import time
+from time import ctime
+appId ='JGELT7-JPP84WGWJ6'
+client = wolframalpha.Client(appId)
 
 #greetings and response array
 greetings=["hello how are you","how are you doing","Hey","what's up dude","Hello"]
@@ -40,36 +43,40 @@ def openApp(text):
         break
 
 #search function
-def searchweb(text):
-   searchresults=wikipedia.search(text)
-   if not searchresults:
-      engine.say("NO results")
-      engine.runAndWait()
-      return
-   else:
-     try:
-       page=wikipedia.page(searchresults[0])
-       engine.say("Here is what i have found for you")
-     except Exception as err:
-       page=wikipedia.page(err.options[0])
-     
-     engine.say(wikipedia.summary(text))
-     engine.runAndWait()
-   engine.say("Was it satisfying")
-   r=sr.Recognizer()
-   with sr.Microphone() as source:
-    audio=r.listen(source) 
-    try:
-      text1=r.recognize_google(audio)
-      if 'no' in text1:
-          googlesearch(text) 
-    except Exception as e:
-          engine.say("Try saying it again") 
+def search(text):
+  res = client.query(text)
+  # Wolfram cannot resolve the question
+  if res['@success'] == 'false':
+     engine.say('Question cannot be resolved')
+  # Wolfram was able to resolve question
+  else:
+    
+    result = ''
+    # pod[0] is the question
+    pod0 = res['pod'][0]
+    # pod[1] may contains the answer
+    pod1 = res['pod'][1]
+    # checking if pod1 has primary=true or title=result|definition
+    if (('definition' in pod1['@title'].lower()) or ('result' in  pod1['@title'].lower()) or (pod1.get('@primary','false') == 'true')):
+      # extracting result from pod1
+      result = resolveListOrDict(pod1['subpod'])
+      engine.say(result)
+    else:
+      # extracting wolfram question interpretation from pod0
+      question = resolveListOrDict(pod0['subpod'])
+      # removing unnecessary parenthesis
+      question = removeBrackets(question)
+      # searching for response from wikipedia
+      
+def resolveListOrDict(variable):
+  if isinstance(variable, list):
+    return variable[0]['plaintext']
+  else:
+    return variable['plaintext']
 
+def removeBrackets(variable):
+  return variable.split('(')[0]
 
-#googlesearch
-def googlesearch(text):
-   webbrowser.open_new_tab("www.google.com/search?q="+text)
 #initialize microphone
 mic_name="Microphone(Realtek(R) Audio)"
 
@@ -101,9 +108,8 @@ with sr.Microphone(device_index=device_id,sample_rate=sample_rate,chunk_size=chu
               greeting()
            elif 'open' in text:
               openApp(text)
-               
            else:
-              searchweb(text)
+              search(text)
          
          except Exception as e:
            engine.say("Sorry I am unable to understand you")
